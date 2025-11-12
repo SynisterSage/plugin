@@ -5,7 +5,7 @@ const CopyPlugin = require("copy-webpack-plugin");
 module.exports = {
     entry: './src/index.jsx',
     output: {
-        path: path.resolve(__dirname, 'dist'),
+        path: path.resolve(__dirname, 'plugin'),
         filename: 'index.js',
         //libraryTarget: "commonjs2"
     },

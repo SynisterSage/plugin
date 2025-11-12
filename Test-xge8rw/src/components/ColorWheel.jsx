@@ -51,8 +51,19 @@ export const ColorWheel = ({ label, value, onChange }) => {
             </div>
 
             <div className="color-wheel-preview-section">
-                <div className="color-preview-square" style={{ backgroundColor: hex }} />
-                <div className="color-hex-display">{hex.toUpperCase()}</div>
+                <div 
+                    className="color-preview-square" 
+                    style={{ 
+                        backgroundColor: hex,
+                        width: '50px',
+                        height: '50px',
+                        display: 'block'
+                    }} 
+                />
+                <div className="color-info">
+                    <div className="color-hex-display">{hex.toUpperCase()}</div>
+                    <div className="color-rgb-display">RGB({rgb.r}, {rgb.g}, {rgb.b})</div>
+                </div>
             </div>
 
             <button

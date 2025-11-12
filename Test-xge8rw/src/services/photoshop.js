@@ -1,5 +1,7 @@
 const photoshop = require("photoshop");
 const { app, core, action, imaging } = photoshop;
+const { wavyLine } = require("../algorithms/wavyLine.js");
+const { halftoneCircles } = require("../algorithms/halftoneCircles.js");
 
 /**
  * Get the active document
@@ -269,6 +271,16 @@ function processImagePixels(pixels, width, height, settings) {
         applyContrast(processed, settings.contrast);
     }
 
+    // Apply vibrance adjustment
+    if (settings.vibrance !== 0) {
+        applyVibrance(processed, settings.vibrance);
+    }
+
+    // Apply posterize (color reduction) before dithering
+    if (settings.posterize && settings.posterize < 256) {
+        applyPosterize(processed, settings.posterize);
+    }
+
     // Apply blur if needed
     if (settings.blur > 0) {
         applyBlur(processed, width, height, Math.round(settings.blur));
@@ -307,6 +319,20 @@ function processImagePixels(pixels, width, height, settings) {
     
     if (settings.algorithm === "floyd-steinberg") {
         applyFloydSteinbergDithering(scaledPixels, ditherWidth, ditherHeight, settings.colorDepth, settings.ditherIntensity);
+    } else if (settings.algorithm === "wavy-line") {
+        // Wavy Line Ridge Pattern Dithering (Fingerprint Effect)
+        const imageDataObj = {
+            data: scaledPixels,
+            width: ditherWidth,
+            height: ditherHeight
+        };
+        const ditheredImageData = wavyLine(imageDataObj, {
+            ridgeSpacing: settings.ridgeSpacing || 3,
+            waveAmplitude: settings.waveAmplitude || 1.2,
+            intensity: settings.ditherIntensity,
+            colorMode: settings.wavyLineColorMode || 'purple-blue'
+        });
+        scaledPixels.set(ditheredImageData.data);
     } else if (settings.algorithm === "jarvis-judice-ninke") {
         applyJarvisJudiceNinkeDithering(scaledPixels, ditherWidth, ditherHeight, settings.colorDepth, settings.ditherIntensity);
     } else if (settings.algorithm === "stucki") {
@@ -325,6 +351,21 @@ function processImagePixels(pixels, width, height, settings) {
         applyOrderedDithering(scaledPixels, ditherWidth, ditherHeight, settings.colorDepth, 8, settings.ditherIntensity);
     } else if (settings.algorithm === "threshold") {
         applyThreshold(scaledPixels, 128);
+    } else if (settings.algorithm === "halftone-circles") {
+        // Halftone Circles Dithering (Natural-looking circular dots)
+        const imageDataObj = {
+            data: scaledPixels,
+            width: ditherWidth,
+            height: ditherHeight
+        };
+        const halftoneData = halftoneCircles(imageDataObj, {
+            gridSpacing: settings.halftoneGridSpacing || 8,
+            minDotSize: settings.halftoneMinDot || 0.5,
+            maxDotSize: settings.halftoneMaxDot || 8,
+            intensity: settings.ditherIntensity,
+            colorMode: settings.halftoneColorMode || "black-white"
+        });
+        scaledPixels.set(halftoneData.data);
     }
 
     // Scale back up if we scaled down
@@ -1444,6 +1485,104 @@ function applyColorMapping(pixels, width, height, mode, settings) {
         console.log("Color mapping applied successfully");
     } catch (error) {
         console.error("Error applying color mapping:", error);
+    }
+}
+
+/**
+ * Apply vibrance adjustment to pixels
+ * Vibrance selectively saturates colors - affects muted colors more than saturated ones
+ * @param {Uint8Array} pixels - RGBA pixel data
+ * @param {number} vibrance - -100 to +100
+ */
+export function applyVibrance(pixels, vibrance) {
+    // Normalize vibrance to -1 to +1 range
+    const amount = vibrance / 100;
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        
+        // Convert RGB to HSL
+        const max = Math.max(r, g, b) / 255;
+        const min = Math.min(r, g, b) / 255;
+        const l = (max + min) / 2;
+        
+        let h, s;
+        
+        if (max === min) {
+            h = s = 0; // Achromatic
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            
+            switch (max) {
+                case r / 255: h = (((g - b) / 255) / d + (g < b ? 6 : 0)) / 6; break;
+                case g / 255: h = (((b - r) / 255) / d + 2) / 6; break;
+                case b / 255: h = (((r - g) / 255) / d + 4) / 6; break;
+            }
+        }
+        
+        // Vibrance: boost saturation more for less saturated colors
+        // Formula: saturation is increased by amount * (1 - saturation)
+        // This means pure gray (s=0) gets full boost, while fully saturated (s=1) gets no boost
+        const vibranceFactor = 1 + amount * (1 - s);
+        s = Math.max(0, Math.min(1, s * vibranceFactor));
+        
+        // Convert HSL back to RGB
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+        const m = l - c / 2;
+        
+        let rr, gg, bb;
+        
+        if (h < 1 / 6) {
+            [rr, gg, bb] = [c, x, 0];
+        } else if (h < 2 / 6) {
+            [rr, gg, bb] = [x, c, 0];
+        } else if (h < 3 / 6) {
+            [rr, gg, bb] = [0, c, x];
+        } else if (h < 4 / 6) {
+            [rr, gg, bb] = [0, x, c];
+        } else if (h < 5 / 6) {
+            [rr, gg, bb] = [x, 0, c];
+        } else {
+            [rr, gg, bb] = [c, 0, x];
+        }
+        
+        pixels[i] = Math.round((rr + m) * 255);
+        pixels[i + 1] = Math.round((gg + m) * 255);
+        pixels[i + 2] = Math.round((bb + m) * 255);
+        // Keep alpha unchanged
+    }
+}
+
+/**
+ * Apply posterize effect - reduce color palette to specified number of levels
+ * @param {Uint8Array} pixels - RGBA pixel data
+ * @param {number} levels - 2-256 color levels
+ */
+export function applyPosterize(pixels, levels) {
+    // Clamp levels to valid range
+    const colorLevels = Math.max(2, Math.min(256, Math.round(levels)));
+    
+    if (colorLevels === 256) {
+        // No posterization needed if we have full 256 levels
+        return;
+    }
+    
+    // Calculate step size for quantization
+    const step = 256 / colorLevels;
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+        // Posterize RGB channels (keep alpha unchanged)
+        for (let c = 0; c < 3; c++) {
+            // Quantize to nearest color level
+            const quantized = Math.floor(pixels[i + c] / step) * step;
+            // Add dithering noise to avoid banding (optional, subtle)
+            const noise = (Math.random() - 0.5) * (step / 4);
+            pixels[i + c] = Math.max(0, Math.min(255, quantized + noise));
+        }
     }
 }
 

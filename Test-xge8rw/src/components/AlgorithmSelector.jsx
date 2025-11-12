@@ -5,6 +5,8 @@ export const AlgorithmSelector = ({ selected, onChange }) => {
         { id: "floyd-steinberg", label: "Floyd-Steinberg" },
         { id: "ordered", label: "Ordered Dithering" },
         { id: "threshold", label: "Threshold" },
+        { id: "wavy-line", label: "Wavy Line (Fingerprint)" },
+        { id: "halftone-circles", label: "Halftone Circles" },
         { id: "adaptive", label: "Adaptive (Coming Soon)" },
     ];
 

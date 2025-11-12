@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { getActiveDocument, getLayerPixelData, renderDitheredResult, showAlert } from "../services/photoshop.js";
 import { floydSteinberg } from "../algorithms/floydSteinberg.js";
 import { ColorWheel } from "../components/ColorWheel.jsx";
@@ -12,6 +12,17 @@ export const DitherPanel = () => {
     const [selectedAlgorithm, setSelectedAlgorithm] = useState("floyd-steinberg");
     const [colorDepth, setColorDepth] = useState(3);
 
+    // Wavy Line Controls (Fingerprint Ridge Pattern)
+    const [ridgeSpacing, setRidgeSpacing] = useState(3);
+    const [waveAmplitude, setWaveAmplitude] = useState(1.2);
+    const [wavyLineColorMode, setWavyLineColorMode] = useState("purple-blue");
+
+    // Halftone Circles Controls
+    const [halftoneGridSpacing, setHalftoneGridSpacing] = useState(8);
+    const [halftoneMinDot, setHalftoneMinDot] = useState(0.5);
+    const [halftoneMaxDot, setHalftoneMaxDot] = useState(8);
+    const [halftoneColorMode, setHalftoneColorMode] = useState("black-white");
+
     // Effect Controls
     const [sharpenStrength, setSharpenStrength] = useState(0);
     const [sharpenRadius, setSharpenRadius] = useState(1);
@@ -20,6 +31,8 @@ export const DitherPanel = () => {
     const [blur, setBlur] = useState(0);
     const [brightness, setBrightness] = useState(0);
     const [contrast, setContrast] = useState(0);
+    const [vibrance, setVibrance] = useState(0);
+    const [posterize, setPosterize] = useState(256);
 
     // Tonal Controls
     const [tonalMappingType, setTonalMappingType] = useState("singleColor");
@@ -29,6 +42,11 @@ export const DitherPanel = () => {
 
     // Background
     const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+
+    // Layer Detection
+    const [selectedLayerName, setSelectedLayerName] = useState(null);
+    const [isLayerValid, setIsLayerValid] = useState(false);
+    const [layerWarningActive, setLayerWarningActive] = useState(false);
 
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -47,6 +65,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 0,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "none",
             shadowColor: "#000000",
             midtoneColor: "#808080",
@@ -65,28 +85,35 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 10,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "none",
             shadowColor: "#000000",
             midtoneColor: "#808080",
             highlightColor: "#ffffff",
         },
-        halftone: {
-            name: "Bold Halftone",
-            algorithm: "ordered-8x8",
-            colorDepth: 2,
+        wavyLine: {
+            name: "Wavy Line (Fingerprint Ridge)",
+            algorithm: "wavy-line",
+            colorDepth: 3,
             ditherIntensity: 100,
-            dotSize: 4,
-            sharpenStrength: 0,
-            sharpenRadius: 1,
+            dotSize: 1,
+            sharpenStrength: 35,
+            sharpenRadius: 2,
             noise: 0,
             denoise: 0,
             blur: 0,
             brightness: 0,
-            contrast: 20,
+            contrast: 40,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "none",
             shadowColor: "#000000",
             midtoneColor: "#808080",
             highlightColor: "#ffffff",
+            ridgeSpacing: 3,
+            waveAmplitude: 1.2,
+            wavyLineColorMode: "purple-blue"
         },
         fingerprint: {
             name: "Fingerprint (Purple)",
@@ -101,6 +128,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 55,
+            vibrance: 30,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#000000",
             midtoneColor: "#8844cc",
@@ -119,6 +148,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 5,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "none",
             shadowColor: "#000000",
             midtoneColor: "#808080",
@@ -137,6 +168,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 5,
             contrast: 15,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "none",
             shadowColor: "#000000",
             midtoneColor: "#808080",
@@ -155,6 +188,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 85,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "singleColor",
             shadowColor: "#000000",
             midtoneColor: "#ff00ff",
@@ -173,6 +208,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 5,
             contrast: 25,
+            vibrance: 30,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#001a4d",
             midtoneColor: "#0066cc",
@@ -191,6 +228,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 10,
             contrast: 40,
+            vibrance: 40,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#330000",
             midtoneColor: "#ff6600",
@@ -209,6 +248,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: -5,
             contrast: 30,
+            vibrance: 20,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#0a2a0a",
             midtoneColor: "#228B22",
@@ -227,6 +268,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 5,
             contrast: 70,
+            vibrance: 80,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#000000",
             midtoneColor: "#00ff00",
@@ -245,6 +288,8 @@ export const DitherPanel = () => {
             blur: 2,
             brightness: 8,
             contrast: 15,
+            vibrance: -30,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#4a3728",
             midtoneColor: "#c9a877",
@@ -263,6 +308,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 80,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "singleColor",
             shadowColor: "#000000",
             midtoneColor: "#ffffff",
@@ -281,6 +328,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 5,
             contrast: 20,
+            vibrance: 50,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#4a2235",
             midtoneColor: "#b76e79",
@@ -299,6 +348,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 50,
+            vibrance: 60,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#1a0033",
             midtoneColor: "#6600ff",
@@ -317,6 +368,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 10,
             contrast: 15,
+            vibrance: 40,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#001a1a",
             midtoneColor: "#00cc99",
@@ -335,6 +388,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 5,
             contrast: 65,
+            vibrance: 70,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#330000",
             midtoneColor: "#ff3300",
@@ -353,6 +408,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 8,
             contrast: 22,
+            vibrance: 45,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#330033",
             midtoneColor: "#9966cc",
@@ -371,6 +428,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: -5,
             contrast: 45,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "singleColor",
             shadowColor: "#000000",
             midtoneColor: "#1a1a4d",
@@ -389,6 +448,8 @@ export const DitherPanel = () => {
             blur: 2,
             brightness: 15,
             contrast: 25,
+            vibrance: 25,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#664422",
             midtoneColor: "#cc9966",
@@ -407,6 +468,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 2,
             contrast: 35,
+            vibrance: 15,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#1a2a3a",
             midtoneColor: "#4a7a9a",
@@ -425,6 +488,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 6,
             contrast: 28,
+            vibrance: 55,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#330011",
             midtoneColor: "#ff66aa",
@@ -443,6 +508,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: -10,
             contrast: 75,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "singleColor",
             shadowColor: "#000000",
             midtoneColor: "#0033ff",
@@ -461,6 +528,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 10,
             contrast: 38,
+            vibrance: 35,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#331100",
             midtoneColor: "#ffaa00",
@@ -479,6 +548,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 0,
             contrast: 40,
+            vibrance: 45,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#003366",
             midtoneColor: "#0066ff",
@@ -497,6 +568,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: -15,
             contrast: 80,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#000000",
             midtoneColor: "#333333",
@@ -515,6 +588,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 8,
             contrast: 32,
+            vibrance: 35,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#001a33",
             midtoneColor: "#00ccff",
@@ -533,6 +608,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 2,
             contrast: 48,
+            vibrance: 50,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#330000",
             midtoneColor: "#cc0000",
@@ -551,6 +628,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: -3,
             contrast: 28,
+            vibrance: 10,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#1a1f2e",
             midtoneColor: "#4a5a7a",
@@ -569,6 +648,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 12,
             contrast: 18,
+            vibrance: -20,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#3a3020",
             midtoneColor: "#d9c9a8",
@@ -587,6 +668,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 3,
             contrast: 35,
+            vibrance: 40,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#2a1a3a",
             midtoneColor: "#7a4a8a",
@@ -605,6 +688,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 4,
             contrast: 52,
+            vibrance: 50,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#001a1a",
             midtoneColor: "#009966",
@@ -623,6 +708,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 7,
             contrast: 42,
+            vibrance: 30,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#331a00",
             midtoneColor: "#cc6600",
@@ -641,6 +728,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 5,
             contrast: 26,
+            vibrance: 35,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#2a1a3a",
             midtoneColor: "#9966bb",
@@ -659,6 +748,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: -8,
             contrast: 68,
+            vibrance: 0,
+            posterize: 256,
             tonalMappingType: "singleColor",
             shadowColor: "#000000",
             midtoneColor: "#333333",
@@ -677,6 +768,8 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: 9,
             contrast: 30,
+            vibrance: 40,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#330011",
             midtoneColor: "#ff9966",
@@ -695,6 +788,8 @@ export const DitherPanel = () => {
             blur: 1,
             brightness: 0,
             contrast: 24,
+            vibrance: 20,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#1a1a0a",
             midtoneColor: "#669966",
@@ -713,12 +808,121 @@ export const DitherPanel = () => {
             blur: 0,
             brightness: -5,
             contrast: 58,
+            vibrance: 50,
+            posterize: 256,
             tonalMappingType: "3color",
             shadowColor: "#1a0033",
             midtoneColor: "#6633ff",
             highlightColor: "#ff99ff",
         },
+        heatmap: {
+            name: "Heatmap",
+            algorithm: "floyd-steinberg",
+            colorDepth: 3,
+            ditherIntensity: 95,
+            dotSize: 1,
+            sharpenStrength: 35,
+            sharpenRadius: 1,
+            noise: 2,
+            denoise: 0,
+            blur: 0,
+            brightness: 0,
+            contrast: 55,
+            vibrance: 80,
+            posterize: 256,
+            tonalMappingType: "3color",
+            shadowColor: "#0000ff",
+            midtoneColor: "#ffff00",
+            highlightColor: "#ff0000",
+        },
+        halftoneNewspaper: {
+            name: "Newspaper Halftone",
+            algorithm: "halftone-circles",
+            colorDepth: 8,
+            ditherIntensity: 100,
+            dotSize: 1,
+            sharpenStrength: 5,
+            sharpenRadius: 1,
+            noise: 0,
+            denoise: 0,
+            blur: 0,
+            brightness: 0,
+            contrast: 10,
+            vibrance: 0,
+            posterize: 256,
+            tonalMappingType: "none",
+            shadowColor: "#000000",
+            midtoneColor: "#808080",
+            highlightColor: "#ffffff",
+            halftoneGridSpacing: 8,
+            halftoneMinDot: 0.5,
+            halftoneMaxDot: 8,
+            halftoneColorMode: "black-white"
+        },
+        halftoneArtistic: {
+            name: "Artistic Halftone",
+            algorithm: "halftone-circles",
+            colorDepth: 8,
+            ditherIntensity: 85,
+            dotSize: 1,
+            sharpenStrength: 15,
+            sharpenRadius: 1,
+            noise: 2,
+            denoise: 0,
+            blur: 1,
+            brightness: 5,
+            contrast: 20,
+            vibrance: 15,
+            posterize: 256,
+            tonalMappingType: "none",
+            shadowColor: "#000000",
+            midtoneColor: "#808080",
+            highlightColor: "#ffffff",
+            halftoneGridSpacing: 10,
+            halftoneMinDot: 0.8,
+            halftoneMaxDot: 7,
+            halftoneColorMode: "black-white"
+        },
     };
+
+    // Check for active layer selection (runs periodically)
+    useEffect(() => {
+        const checkLayerSelection = () => {
+            try {
+                const doc = getActiveDocument();
+                if (!doc || !doc.activeLayers || doc.activeLayers.length === 0) {
+                    setSelectedLayerName(null);
+                    setIsLayerValid(false);
+                    return;
+                }
+
+                const layer = doc.activeLayers[0];
+                
+                // Check if it's a group (we can't work with groups)
+                if (layer.kind === "group") {
+                    setSelectedLayerName(`${layer.name} (Group)`);
+                    setIsLayerValid(false);
+                    return;
+                }
+
+                // Allow smart objects, adjustment layers, and pixel layers
+                // The renderDitheredResult function will handle rasterization if needed
+                setSelectedLayerName(layer.name);
+                setIsLayerValid(true);
+            } catch (error) {
+                console.error("Error checking layer:", error);
+                setSelectedLayerName(null);
+                setIsLayerValid(false);
+            }
+        };
+
+        // Check immediately
+        checkLayerSelection();
+
+        // Check every 500ms for layer changes
+        const interval = setInterval(checkLayerSelection, 500);
+        return () => clearInterval(interval);
+    }, []);
 
     const applyPreset = (presetKey) => {
         const preset = presets[presetKey];
@@ -733,10 +937,16 @@ export const DitherPanel = () => {
         setBlur(preset.blur);
         setBrightness(preset.brightness);
         setContrast(preset.contrast);
+        setVibrance(preset.vibrance || 0);
+        setPosterize(preset.posterize || 256);
         setTonalMappingType(preset.tonalMappingType);
         setShadowColor(preset.shadowColor);
         setMidtoneColor(preset.midtoneColor);
         setHighlightColor(preset.highlightColor);
+        // Wavy line specific settings
+        if (preset.ridgeSpacing !== undefined) setRidgeSpacing(preset.ridgeSpacing);
+        if (preset.waveAmplitude !== undefined) setWaveAmplitude(preset.waveAmplitude);
+        if (preset.wavyLineColorMode !== undefined) setWavyLineColorMode(preset.wavyLineColorMode);
     };
 
     const handleRender = async () => {
@@ -767,25 +977,35 @@ export const DitherPanel = () => {
                 blur,
                 brightness,
                 contrast,
+                vibrance,
+                posterize,
                 tonalMappingType,
                 highlightColor,
                 midtoneColor,
                 shadowColor,
-                backgroundColor
+                backgroundColor,
+                // Wavy line specific settings
+                ridgeSpacing,
+                waveAmplitude,
+                wavyLineColorMode,
+                // Halftone circles specific settings
+                halftoneGridSpacing,
+                halftoneMinDot,
+                halftoneMaxDot,
+                halftoneColorMode
             };
 
             const success = await renderDitheredResult(settings);
             
             if (success) {
-                const message = `✓ Dithering Applied!\n\nRENDER SETTINGS:\n• Algorithm: ${selectedAlgorithm}\n• Color Depth: ${colorDepth} bits\n• DPI: ${inputDPI}\n• Intensity: ${ditherIntensity}%\n• Resampling: ${resampling}\n\nEFFECT CONTROLS:\n• Brightness: ${brightness}\n• Contrast: ${contrast}\n• Blur: ${blur}\n• Sharpen: ${sharpenStrength}% (radius: ${sharpenRadius})\n• Noise: ${noise}%\n• Denoise: ${denoise}%\n\nTONAL CONTROLS:\n• Mapping Mode: ${tonalMappingType}\n• Shadows: ${shadowColor}\n• Midtones: ${midtoneColor}\n• Highlights: ${highlightColor}`;
-                showAlert(message);
+                showAlert("✓ Dithering applied successfully!");
             } else {
                 showAlert("Could not apply dithering. Please check that an image is open.");
             }
             
         } catch (error) {
             console.error("Error rendering dither:", error);
-            showAlert(`Error: ${error.message}`);
+            showAlert(`Error: ${error.message || error}`);
         } finally {
             setIsProcessing(false);
         }
@@ -808,6 +1028,8 @@ export const DitherPanel = () => {
         setBlur(0);
         setBrightness(0);
         setContrast(0);
+        setVibrance(0);
+        setPosterize(256);
 
         // Tonal Controls
         setTonalMappingType("singleColor");
@@ -821,8 +1043,52 @@ export const DitherPanel = () => {
 
     return (
         <div className="dither-panel">
-            <div className="panel-header">
-                <h1>DitheraAI Pro</h1>
+            <div className="panel-header" style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(10px)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+                gap: '16px'
+            }}>
+                <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Specular</h1>
+                
+                {/* LAYER STATUS Indicator - Glass style */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '8px 12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(10px)',
+                    border: `1px solid ${isLayerValid ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)'}`,
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    color: isLayerValid ? '#4CAF50' : '#f44336',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease'
+                }}
+                className={layerWarningActive ? 'layer-status-warning' : ''}>
+                    <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isLayerValid ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                        border: `2px solid ${isLayerValid ? '#4CAF50' : '#f44336'}`,
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        flexShrink: 0
+                    }}>
+                        {isLayerValid ? '✓' : '✗'}
+                    </div>
+                    <span>{selectedLayerName || 'No layer'}</span>
+                </div>
             </div>
 
             <div className="scrollable-content">
@@ -837,7 +1103,6 @@ export const DitherPanel = () => {
                         >
                             <option value="default">Default</option>
                             <option value="classic">Classic Newspaper</option>
-                            <option value="halftone">Bold Halftone</option>
                             <option value="fingerprint">Fingerprint (Purple)</option>
                             <option value="fine">Fine Detail</option>
                             <option value="artistic">Artistic</option>
@@ -873,6 +1138,7 @@ export const DitherPanel = () => {
                             <option value="peach">Peach</option>
                             <option value="olive">Olive</option>
                             <option value="twilight">Twilight</option>
+                            <option value="heatmap">Heatmap</option>
                         </select>
                     </div>
                 </div>
@@ -939,6 +1205,8 @@ export const DitherPanel = () => {
                             <option value="ordered-2x2">Ordered 2x2 Bayer</option>
                             <option value="ordered-4x4">Ordered 4x4 Bayer</option>
                             <option value="ordered-8x8">Ordered 8x8 Bayer</option>
+                            <option value="wavy-line">Wavy Line (Fingerprint Ridge)</option>
+                            <option value="halftone-circles">Halftone Circles</option>
                             <option value="threshold">Threshold (B&W)</option>
                         </select>
                     </div>
@@ -970,39 +1238,110 @@ export const DitherPanel = () => {
                         />
                     </div>
 
-                    <div className="halftone-presets">
-                        <label className="presets-label">Halftone Presets</label>
-                        <div className="presets-buttons-row">
-                            <button 
-                                className="preset-btn"
-                                onClick={() => setDotSize(1)}
-                                title="Fine dots"
-                            >
-                                Fine (1x)
-                            </button>
-                            <button 
-                                className="preset-btn"
-                                onClick={() => setDotSize(2)}
-                                title="Medium dots"
-                            >
-                                Medium (2x)
-                            </button>
-                            <button 
-                                className="preset-btn"
-                                onClick={() => setDotSize(4)}
-                                title="Large dots"
-                            >
-                                Large (4x)
-                            </button>
-                            <button 
-                                className="preset-btn"
-                                onClick={() => setDotSize(6)}
-                                title="Extra large dots"
-                            >
-                                XL (6x)
-                            </button>
-                        </div>
-                    </div>
+                    {/* Wavy Line specific controls */}
+                    {selectedAlgorithm === "wavy-line" && (
+                        <>
+                            <div className="control-row">
+                                <label className="control-label">Ridge Spacing</label>
+                                <span className="control-value">{ridgeSpacing.toFixed(1)} px</span>
+                                <input 
+                                    type="range"
+                                    className="control-slider"
+                                    min="1"
+                                    max="8"
+                                    step="0.5"
+                                    value={ridgeSpacing}
+                                    onChange={(e) => setRidgeSpacing(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="control-row">
+                                <label className="control-label">Wave Amplitude</label>
+                                <span className="control-value">{waveAmplitude.toFixed(2)}</span>
+                                <input 
+                                    type="range"
+                                    className="control-slider"
+                                    min="0.1"
+                                    max="3"
+                                    step="0.1"
+                                    value={waveAmplitude}
+                                    onChange={(e) => setWaveAmplitude(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="control-row">
+                                <label className="control-label">Color Mode</label>
+                                <select 
+                                    className="control-select"
+                                    value={wavyLineColorMode}
+                                    onChange={(e) => setWavyLineColorMode(e.target.value)}
+                                >
+                                    <option value="purple-blue">Purple to Cyan (Fingerprint)</option>
+                                    <option value="bw">Black & White</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Halftone Circles specific controls */}
+                    {selectedAlgorithm === "halftone-circles" && (
+                        <>
+                            <div className="control-row">
+                                <label className="control-label">Grid Spacing</label>
+                                <span className="control-value">{halftoneGridSpacing} px</span>
+                                <input 
+                                    type="range"
+                                    className="control-slider"
+                                    min="2"
+                                    max="32"
+                                    step="1"
+                                    value={halftoneGridSpacing}
+                                    onChange={(e) => setHalftoneGridSpacing(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="control-row">
+                                <label className="control-label">Min Dot Size</label>
+                                <span className="control-value">{halftoneMinDot.toFixed(1)} px</span>
+                                <input 
+                                    type="range"
+                                    className="control-slider"
+                                    min="0.1"
+                                    max="4"
+                                    step="0.1"
+                                    value={halftoneMinDot}
+                                    onChange={(e) => setHalftoneMinDot(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="control-row">
+                                <label className="control-label">Max Dot Size</label>
+                                <span className="control-value">{halftoneMaxDot.toFixed(1)} px</span>
+                                <input 
+                                    type="range"
+                                    className="control-slider"
+                                    min="2"
+                                    max="20"
+                                    step="0.5"
+                                    value={halftoneMaxDot}
+                                    onChange={(e) => setHalftoneMaxDot(Number(e.target.value))}
+                                />
+                            </div>
+
+                            <div className="control-row">
+                                <label className="control-label">Dot Color Mode</label>
+                                <select 
+                                    className="control-select"
+                                    value={halftoneColorMode}
+                                    onChange={(e) => setHalftoneColorMode(e.target.value)}
+                                >
+                                    <option value="black-white">Black on White</option>
+                                    <option value="inverted">White on Black</option>
+                                    <option value="original">Original Colors</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* EFFECT CONTROLS Section */}
@@ -1100,6 +1439,32 @@ export const DitherPanel = () => {
                             max="100"
                             value={contrast}
                             onChange={(e) => setContrast(Number(e.target.value))}
+                        />
+                    </div>
+
+                    <div className="control-row">
+                        <label className="control-label">Vibrance</label>
+                        <span className="control-value">{vibrance}</span>
+                        <input 
+                            type="range"
+                            className="control-slider"
+                            min="-100"
+                            max="100"
+                            value={vibrance}
+                            onChange={(e) => setVibrance(Number(e.target.value))}
+                        />
+                    </div>
+
+                    <div className="control-row">
+                        <label className="control-label">Posterize (Color Levels)</label>
+                        <span className="control-value">{posterize}</span>
+                        <input 
+                            type="range"
+                            className="control-slider"
+                            min="2"
+                            max="256"
+                            value={posterize}
+                            onChange={(e) => setPosterize(Number(e.target.value))}
                         />
                     </div>
                 </div>
@@ -1208,7 +1573,7 @@ export const DitherPanel = () => {
 
                     <ColorWheel 
                         label="Background Color"
-                        color={backgroundColor}
+                        value={backgroundColor}
                         onChange={setBackgroundColor}
                     />
                 </div>
@@ -1224,9 +1589,14 @@ export const DitherPanel = () => {
                 </sp-button>
                 <sp-button 
                     variant="primary" 
-                    onClick={handleRender}
+                    onClick={!isLayerValid || isProcessing ? undefined : handleRender}
+                    title={!isLayerValid ? "No layer selected - please select a layer to render" : ""}
+                    style={{
+                        opacity: !isLayerValid ? 0.5 : 1,
+                        cursor: !isLayerValid ? 'not-allowed' : 'pointer'
+                    }}
                 >
-                    {isProcessing ? "PROCESSING..." : "RENDER"}
+                    RENDER
                 </sp-button>
             </sp-button-group>
         </div>

@@ -1,5 +1,30 @@
 /* ColorWheel Component Styles - Glassmorphism Theme */
 
+:root {
+    --size-color-preview: 50px;
+    --spacing-md: 12px;
+    --spacing-sm: 8px;
+    --spacing-xs: 4px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(10px);
+    --radius-lg: 12px;
+    --radius-md: 8px;
+    --color-accent: #a855f7;
+    --color-accent-hover: #c084fc;
+    --color-text-primary: #fff;
+    --font-mono: 'Courier New', monospace;
+    --font-size-lg: 14px;
+    --font-size-md: 13px;
+    --font-size-base: 12px;
+    --font-weight-bold: 700;
+    --font-weight-semibold: 600;
+    --font-weight-medium: 500;
+    --transition-normal: 0.2s ease;
+    --transition-fast: 0.1s ease;
+}
+
 .color-wheel-container {
     display: flex;
     flex-direction: column;
@@ -39,13 +64,20 @@
 .color-wheel-preview-section {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
+    justify-content: flex-start;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .color-preview-square {
     width: var(--size-color-preview);
     height: var(--size-color-preview);
+    min-width: var(--size-color-preview);
+    min-height: var(--size-color-preview);
     border-radius: var(--radius-md);
     border: 2px solid var(--color-accent);
     box-shadow: 0 0 16px rgba(168, 85, 247, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.1);
@@ -66,6 +98,21 @@
     color: var(--color-text-primary);
     letter-spacing: 1px;
     flex: 1;
+}
+
+.color-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.color-rgb-display {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.5px;
 }
 
 /* Toggle Button */

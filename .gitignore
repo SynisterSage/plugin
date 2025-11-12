@@ -1,0 +1,44 @@
+# Documentation and Research (Internal Planning)
+/docs/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+/Test-xge8rw/dist/
+/Test-xge8rw/plugin/index.js
+/Test-xge8rw/plugin/manifest.json
+
+# Cache
+.cache/
+.eslintcache
+
+# Environment
+.env
+.env.local
+.env.*.local
