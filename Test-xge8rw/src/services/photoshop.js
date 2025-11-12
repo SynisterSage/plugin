@@ -350,7 +350,8 @@ function processImagePixels(pixels, width, height, settings) {
     } else if (settings.algorithm === "ordered-8x8") {
         applyOrderedDithering(scaledPixels, ditherWidth, ditherHeight, settings.colorDepth, 8, settings.ditherIntensity);
     } else if (settings.algorithm === "threshold") {
-        applyThreshold(scaledPixels, 128);
+        const t = (settings.threshold !== undefined && settings.threshold !== null) ? settings.threshold : 128;
+        applyThreshold(scaledPixels, t);
     } else if (settings.algorithm === "halftone-circles") {
         // Halftone Circles Dithering (Natural-looking circular dots)
         const imageDataObj = {
@@ -390,8 +391,11 @@ function processImagePixels(pixels, width, height, settings) {
     }
 
     // Create overlay effect: blend dithered result with transparency
-    // This makes it look like an overlay rather than a full replacement
-    createDitheringOverlay(original, processed, width, height, settings.ditherIntensity);
+    // For threshold algorithm we want a full replacement (clear B/W),
+    // so skip overlay blending to make threshold changes immediately visible.
+    if (settings.algorithm !== 'threshold') {
+        createDitheringOverlay(original, processed, width, height, settings.ditherIntensity);
+    }
 
     return processed;
 }
@@ -1046,6 +1050,8 @@ function applyThreshold(pixels, threshold) {
         pixels[i] = bw;
         pixels[i + 1] = bw;
         pixels[i + 2] = bw;
+        // Ensure the pixel is fully opaque for a clear threshold result
+        pixels[i + 3] = 255;
     }
 }
 

@@ -31,6 +31,7 @@ export const DitherPanel = () => {
     const [blur, setBlur] = useState(0);
     const [brightness, setBrightness] = useState(0);
     const [contrast, setContrast] = useState(0);
+    const [threshold, setThreshold] = useState(128);
     const [vibrance, setVibrance] = useState(0);
     const [posterize, setPosterize] = useState(256);
 
@@ -56,6 +57,7 @@ export const DitherPanel = () => {
             name: "Default",
             algorithm: "floyd-steinberg",
             colorDepth: 3,
+            threshold: 128,
             ditherIntensity: 100,
             dotSize: 1,
             sharpenStrength: 0,
@@ -76,6 +78,7 @@ export const DitherPanel = () => {
             name: "Classic Newspaper",
             algorithm: "ordered-4x4",
             colorDepth: 2,
+            threshold: 128,
             ditherIntensity: 100,
             dotSize: 2,
             sharpenStrength: 0,
@@ -119,6 +122,7 @@ export const DitherPanel = () => {
             name: "Fingerprint (Purple)",
             algorithm: "ordered-8x8",
             colorDepth: 2,
+            threshold: 120,
             ditherIntensity: 100,
             dotSize: 4,
             sharpenStrength: 65,
@@ -299,6 +303,7 @@ export const DitherPanel = () => {
             name: "Film Noir",
             algorithm: "threshold",
             colorDepth: 1,
+            threshold: 200,
             ditherIntensity: 100,
             dotSize: 1,
             sharpenStrength: 50,
@@ -937,6 +942,7 @@ export const DitherPanel = () => {
         setBlur(preset.blur);
         setBrightness(preset.brightness);
         setContrast(preset.contrast);
+        setThreshold(preset.threshold !== undefined ? preset.threshold : 128);
         setVibrance(preset.vibrance || 0);
         setPosterize(preset.posterize || 256);
         setTonalMappingType(preset.tonalMappingType);
@@ -977,6 +983,7 @@ export const DitherPanel = () => {
                 blur,
                 brightness,
                 contrast,
+                threshold,
                 vibrance,
                 posterize,
                 tonalMappingType,
@@ -1087,7 +1094,7 @@ export const DitherPanel = () => {
                     }}>
                         {isLayerValid ? '✓' : '✗'}
                     </div>
-                    <span>{selectedLayerName || 'No layer'}</span>
+                    <span style={{ marginLeft: '10px', display: 'inline-block' }}>{selectedLayerName || 'No layer'}</span>
                 </div>
             </div>
 
@@ -1439,6 +1446,19 @@ export const DitherPanel = () => {
                             max="100"
                             value={contrast}
                             onChange={(e) => setContrast(Number(e.target.value))}
+                        />
+                    </div>
+
+                    <div className="control-row">
+                        <label className="control-label">Threshold</label>
+                        <span className="control-value">{threshold}</span>
+                        <input
+                            type="range"
+                            className="control-slider"
+                            min="0"
+                            max="255"
+                            value={threshold}
+                            onChange={(e) => setThreshold(Number(e.target.value))}
                         />
                     </div>
 

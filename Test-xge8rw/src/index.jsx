@@ -13,10 +13,10 @@ const ditherController =  new PanelController(() => <DitherPanel/>, {id: "dither
 entrypoints.setup({
     plugin: {
         create(plugin) {
-            console.log("Specular Plugin created");
+            console.log("DitheraAI Pro Plugin created");
         },
         destroy() {
-            console.log("Specular Plugin destroyed");
+            console.log("DitheraAI Pro Plugin destroyed");
         }
     },
     panels: {

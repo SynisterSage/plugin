@@ -57,10 +57,11 @@ export const ColorWheel = ({ label, value, onChange }) => {
                         backgroundColor: hex,
                         width: '50px',
                         height: '50px',
-                        display: 'block'
+                        display: 'block',
+                        marginRight: '12px'
                     }} 
                 />
-                <div className="color-info">
+                <div className="color-info" style={{ paddingTop: '6px' }}>
                     <div className="color-hex-display">{hex.toUpperCase()}</div>
                     <div className="color-rgb-display">RGB({rgb.r}, {rgb.g}, {rgb.b})</div>
                 </div>
